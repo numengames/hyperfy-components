@@ -167,6 +167,7 @@ function setupDefaultSpawnPosition() {
 
   defaultSpawnPosition = new Vector3(x, y, z);
   lastSafePosition = new Vector3(x, y, z);
+  lastSaveTime = world.getTime();
   
   logDebug(`Default spawn position set to: ${vectorToString(defaultSpawnPosition)}`);
 }
