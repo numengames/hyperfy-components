@@ -12,12 +12,6 @@ app.configure([
     label: 'Basic Settings'
   },
   {
-    key: 'nodeName',
-    label: 'Base node name',
-    type: 'text',
-    initial: 'RespawnZone'
-  },
-  {
     key: 'debugMode',
     label: 'Debug Mode',
     type: 'switch',
