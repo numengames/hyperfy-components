@@ -136,7 +136,7 @@ function emitSignal(playerId) {
       timestamp: Date.now(),
     };
 
-    world.emit(app.config.signalName, signalData);
+    app.emit(app.config.signalName, signalData);
     logDebug(`Signal '${app.config.signalName}' emitted successfully`);
   } catch (e) {
     logDebug(`Error emitting signal: ${e.message}`);
