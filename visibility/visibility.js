@@ -445,7 +445,7 @@ if (typeof module === 'undefined') {
     
     mainLogger('info', `${app.instanceId} app initialized successfully`);
   } catch (error) {
-    mainLogger('error', `${app.instanceId} app app initialization failed: ${error.message}`);
+    mainLogger('error', `${app.instanceId} app initialization failed: ${error.message}`);
     mainLogger('error', `Stack trace: ${error.stack}`);
   }
 } else {

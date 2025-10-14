@@ -2,13 +2,6 @@ global.app = {
   send: jest.fn(),
   emit: jest.fn(),
   on: jest.fn(),
-  get: jest.fn(() => ({ name: 'test-node', visible: true })),
-  configure: jest.fn(),
-  instanceId: 'test-app-id',
-  matrixWorld: { clone: jest.fn(() => ({ invert: jest.fn(() => ({})) })) },
-  position: { copy: jest.fn() },
-  quaternion: { copy: jest.fn() },
-  scale: { copy: jest.fn() },
   create: jest.fn((type) => {
     if (type === 'action') {
       return { active: true, label: '', add: jest.fn(), onTrigger: null };
@@ -35,16 +28,12 @@ global.app = {
     }
     return { type, active: true, add: jest.fn() };
   }),
-  add: jest.fn(),
-  traverse: jest.fn((callback) => callback({ name: 'mesh', geometry: {}, matrixWorld: {} }))
+  add: jest.fn()
 };
 
 global.props = {
   appID: 'test-app-id',
   enableDebugMode: false,
-  targetNodeName: 'test-node',
-  initialVisibility: true,
-  enableCollision: true,
   emitterControllerHasCooldown: false,
   emitterControllerCooldown: 0,
   emitterControllerEventLabel: 'Test Action',
@@ -127,7 +116,7 @@ function createFreshMocks() {
     }),
     create: jest.fn((type, options = {}) => {
       if (type === 'action') {
-        return { active: true, label: '', onTrigger: null };
+        return { active: true, label: '', onTrigger: null, distance: 2, ...options };
       }
       if (type === 'ui') {
         return { position: { set: jest.fn() }, add: jest.fn(), active: true, ...options };
@@ -152,9 +141,7 @@ function createFreshMocks() {
       }
       return { type, active: true, add: jest.fn(), ...options };
     }),
-    add: jest.fn(),
-    traverse: jest.fn((callback) => callback({ name: 'mesh', geometry: {}, matrixWorld: {} })),
-    instanceId: 'test-app-id'
+    add: jest.fn()
   };
 
   const mockProps = { ...global.props };
@@ -173,7 +160,6 @@ function createFreshMocks() {
   };
 
   const mockNode = {
-    visible: false,
     position: { x: 0, y: 0, z: 0 },
     add: jest.fn()
   };
@@ -275,37 +261,14 @@ describe('EmitterController Event Handling Use Cases', () => {
   });
 
   describe('Key mode interaction', () => {
-    test('should create action trigger in KEY mode', () => {
+    test('should create action trigger with correct parameters in KEY mode', () => {
       const props = {
         ...mockProps,
         emitterControllerInteractionType: 'key',
         emitterControllerIsEnabled: true,
         emitterControllerTriggerDistance: 2,
-        emitterControllerEventLabel: 'Press to activate'
-      };
-
-      new EmitterController({
-        app: mockApp,
-        node: mockNode,
-        props,
-        world: mockWorld
-      });
-
-      expect(mockApp.create).toHaveBeenCalledWith('action', expect.objectContaining({
-        active: true,
-        distance: 2,
-        label: 'Press to activate'
-      }));
-      expect(mockApp.add).toHaveBeenCalled();
-    });
-
-    test('should emit signal when action is triggered in KEY mode', () => {
-      const props = {
-        ...mockProps,
-        emitterControllerInteractionType: 'key',
-        emitterControllerIsEnabled: true,
-        appID: 'test-emitter-123',
-        emitterControllerHasCooldown: false
+        emitterControllerEventLabel: 'Press to activate',
+        appID: 'test-key-action-123'
       };
 
       const controller = new EmitterController({
@@ -315,23 +278,316 @@ describe('EmitterController Event Handling Use Cases', () => {
         world: mockWorld
       });
 
-      // Ensure manual trigger is active
-      if (controller.manualTriggerNode) {
-        controller.manualTriggerNode.active = true;
-      }
+      expect(mockApp.create).toHaveBeenCalledWith('action', expect.objectContaining({
+        active: true,
+        distance: 2,
+        label: 'Press to activate',
+        onTrigger: expect.any(Function)
+      }));
 
-      // Use global app spy since _emitSignal uses global app
-      const globalAppEmitSpy = jest.spyOn(global.app, 'emit');
+      expect(mockApp.add).toHaveBeenCalled();
 
-      // Simulate trigger
-      controller._handleAction({ playerId: 'test-player', type: 'key' });
+      expect(controller.manualTriggerNode).toBeDefined();
+      expect(controller.manualTriggerNode.onTrigger).toBeInstanceOf(Function);
+    });
 
-      expect(globalAppEmitSpy).toHaveBeenCalledWith('test-emitter-123', expect.objectContaining({
-        playerId: 'test-player',
+    test('should emit signal when action trigger is fired', () => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: false,
+        appID: 'test-key-emit-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+
+      mockApp.emit.mockClear();
+
+      const triggerData = { playerId: 'test-player-id', type: 'key' };
+      controller.manualTriggerNode.onTrigger(triggerData);
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-key-emit-123', expect.objectContaining({
+        playerId: 'test-player-id',
+        timestamp: expect.any(Number)
+      }));
+    });
+
+    test('should emit signal after delay when trigger has delay parameter', () => {
+      jest.useFakeTimers();
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: false,
+        appID: 'test-key-delay-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+
+      mockApp.emit.mockClear();
+
+      const triggerData = { playerId: 'test-player-id', type: 'key', delay: 2 };
+      controller.manualTriggerNode.onTrigger(triggerData);
+
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-key-delay-123', expect.any(Object));
+
+      jest.advanceTimersByTime(1000);
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-key-delay-123', expect.any(Object));
+
+      jest.advanceTimersByTime(1000);
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-key-delay-123', expect.objectContaining({
+        playerId: 'test-player-id',
         timestamp: expect.any(Number)
       }));
 
-      globalAppEmitSpy.mockRestore();
+      jest.useRealTimers();
+    });
+
+    test('should use default transition delay when no delay parameter provided', () => {
+      jest.useFakeTimers();
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: false,
+        emitterControllerTransitionDelay: 1.5,
+        appID: 'test-key-default-delay-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+
+      mockApp.emit.mockClear();
+
+      const triggerData = { playerId: 'test-player-id', type: 'key' };
+      controller.manualTriggerNode.onTrigger(triggerData);
+
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-key-default-delay-123', expect.any(Object));
+
+      jest.advanceTimersByTime(1500);
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-key-default-delay-123', expect.objectContaining({
+        playerId: 'test-player-id',
+        timestamp: expect.any(Number)
+      }));
+
+      jest.useRealTimers();
+    });
+
+    test('should deactivate trigger permanently after first use when single use is enabled', () => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerIsSingleUse: true,
+        emitterControllerHasCooldown: false, // Single use now works WITHOUT cooldown
+        appID: 'test-single-use-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+
+      mockApp.emit.mockClear();
+
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-1', type: 'key' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-single-use-123', expect.objectContaining({
+        playerId: 'test-player-1',
+        timestamp: expect.any(Number)
+      }));
+
+      // The key assertion: trigger should be deactivated immediately after first use
+      expect(controller.manualTriggerNode.active).toBe(false);
+
+      mockApp.emit.mockClear();
+
+      // Try to trigger again - should NOT emit because trigger is permanently deactivated
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-2', type: 'key' });
+
+      // Verify no signal was emitted on second attempt
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-single-use-123', expect.any(Object));
+    });
+
+    test('should activate cooldown and prevent multiple triggers', () => {
+      jest.useFakeTimers();
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: true,
+        emitterControllerCooldown: 2,
+        appID: 'test-cooldown-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+
+      mockApp.emit.mockClear();
+
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-1', type: 'key' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-cooldown-123', expect.objectContaining({
+        playerId: 'test-player-1'
+      }));
+
+      expect(controller.isCooldownActive).toBe(true);
+      expect(controller.cooldownTimer).toBeGreaterThan(0);
+
+      mockApp.emit.mockClear();
+
+      // Try to trigger again immediately - should NOT emit because cooldown is active
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-2', type: 'key' });
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-cooldown-123', expect.any(Object));
+
+      jest.advanceTimersByTime(2100);
+
+      expect(controller.isCooldownActive).toBe(false);
+      expect(controller.cooldownTimer).toBe(0);
+      expect(controller.manualTriggerNode.active).toBe(true);
+
+      // Clear emit calls again
+      mockApp.emit.mockClear();
+
+      // Now trigger again - should work because cooldown has reset
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-3', type: 'key' });
+      expect(mockApp.emit).toHaveBeenCalledWith('test-cooldown-123', expect.objectContaining({
+        playerId: 'test-player-3'
+      }));
+
+      jest.useRealTimers();
+    });
+
+    test('should not reactivate trigger when both single use and cooldown are enabled', () => {
+      jest.useFakeTimers();
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerIsSingleUse: true,
+        emitterControllerHasCooldown: true,
+        emitterControllerCooldown: 1,
+        appID: 'test-single-use-cooldown-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+
+      mockApp.emit.mockClear();
+
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-1', type: 'key' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-single-use-cooldown-123', expect.objectContaining({
+        playerId: 'test-player-1'
+      }));
+
+      // Verify trigger is deactivated immediately (single use)
+      expect(controller.manualTriggerNode.active).toBe(false);
+
+      jest.advanceTimersByTime(1100);
+
+      expect(controller.manualTriggerNode.active).toBe(false);
+
+      jest.useRealTimers();
+    });
+
+    test('should allow multiple triggers without restrictions when both single use and cooldown are disabled', () => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerIsEnabled: true,
+        emitterControllerIsSingleUse: false,
+        emitterControllerHasCooldown: false,
+        appID: 'test-unrestricted-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.manualTriggerNode.active = true;
+      controller.isActive = true;
+
+      mockApp.emit.mockClear();
+
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-1', type: 'key' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-unrestricted-123', expect.objectContaining({
+        playerId: 'test-player-1',
+        timestamp: expect.any(Number)
+      }));
+
+      expect(controller.manualTriggerNode.active).toBe(true);
+
+      mockApp.emit.mockClear();
+
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-2', type: 'key' });
+
+      // Verify the signal was emitted again
+      expect(mockApp.emit).toHaveBeenCalledWith('test-unrestricted-123', expect.objectContaining({
+        playerId: 'test-player-2',
+        timestamp: expect.any(Number)
+      }));
+
+      expect(controller.manualTriggerNode.active).toBe(true);
+
+      mockApp.emit.mockClear();
+
+      controller.manualTriggerNode.onTrigger({ playerId: 'test-player-3', type: 'key' });
+
+      // Verify the signal was emitted a third time
+      expect(mockApp.emit).toHaveBeenCalledWith('test-unrestricted-123', expect.objectContaining({
+        playerId: 'test-player-3',
+        timestamp: expect.any(Number)
+      }));
+
+      expect(controller.manualTriggerNode.active).toBe(true);
     });
   });
 
@@ -373,13 +629,12 @@ describe('EmitterController Event Handling Use Cases', () => {
       }));
     });
 
-    test('should emit proximity events when enabled', () => {
+    test('should activate UI and emit ENTER event when player enters proximity zone', () => {
       const props = {
         ...mockProps,
         emitterControllerInteractionType: 'auto',
         emitterControllerEnableEnterEvent: true,
-        emitterControllerEnableLeaveEvent: true,
-        appID: 'test-proximity-123'
+        appID: 'test-proximity-enter-123'
       };
 
       const controller = new EmitterController({
@@ -389,46 +644,152 @@ describe('EmitterController Event Handling Use Cases', () => {
         world: mockWorld
       });
 
-      // Get the proximity rigidbody that was created
-      const rigidbodyCalls = mockApp.create.mock.calls.filter(call => call[0] === 'rigidbody');
-      expect(rigidbodyCalls.length).toBeGreaterThan(0);
+      controller.interactionUI.active = false;
 
-      // Simulate entering proximity
-      const proximityRigidbody = rigidbodyCalls[0];
-      if (controller.interactionUI) {
-        controller.interactionUI.active = false;
-      }
+      mockApp.emit.mockClear();
 
-      // Mock onTriggerEnter call
-      const mockProximityRigidbody = mockApp.create.mock.results.find(r => r.value && r.value.onTriggerEnter);
-      if (mockProximityRigidbody && mockProximityRigidbody.value.onTriggerEnter) {
-        mockProximityRigidbody.value.onTriggerEnter();
-      }
+      const rigidbodyResults = mockApp.create.mock.results.filter(r => r.value && r.value.onTriggerEnter);
+      expect(rigidbodyResults.length).toBeGreaterThan(0);
+      
+      const proximityRigidbody = rigidbodyResults[0].value;
 
-      // Note: Due to the way the code is structured, we can't easily test the actual emit
-      // without refactoring. This test verifies the setup is correct.
+      // Simulate player entering proximity zone
+      proximityRigidbody.onTriggerEnter({ playerId: 'test-player-1' });
+
+      expect(controller.interactionUI.active).toBe(true);
+
+      // Verify ENTER event was emitted (playerId comes from world.getPlayer().id)
+      expect(mockApp.emit).toHaveBeenCalledWith('enter-proximity-zone-test-proximity-enter-123', expect.objectContaining({
+        playerId: 'test-player',
+        timestamp: expect.any(Number)
+      }));
     });
-  });
 
-  describe('Cooldown system', () => {
-    beforeEach(() => {
+    test('should deactivate UI and emit LEAVE event when player leaves proximity zone', () => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'auto',
+        emitterControllerEnableLeaveEvent: true,
+        appID: 'test-proximity-leave-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      // Simulate UI being active (player was in proximity)
+      controller.interactionUI.active = true;
+
+      mockApp.emit.mockClear();
+
+      const rigidbodyResults = mockApp.create.mock.results.filter(r => r.value && r.value.onTriggerLeave);
+      expect(rigidbodyResults.length).toBeGreaterThan(0);
+      
+      const proximityRigidbody = rigidbodyResults[0].value;
+
+      // Simulate player leaving proximity zone
+      proximityRigidbody.onTriggerLeave({ playerId: 'test-player-1' });
+
+      expect(controller.interactionUI.active).toBe(false);
+
+      // Verify LEAVE event was emitted (playerId comes from world.getPlayer().id)
+      expect(mockApp.emit).toHaveBeenCalledWith('leave-proximity-zone-test-proximity-leave-123', expect.objectContaining({
+        playerId: 'test-player',
+        timestamp: expect.any(Number)
+      }));
+    });
+
+    test('should emit signal when player enters trigger zone in AUTO mode', () => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'auto',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: false,
+        appID: 'test-auto-trigger-123'
+      };
+
+      new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      mockApp.emit.mockClear();
+
+      // The trigger zone uses the global rigidbody (getRigidbody())
+      const triggerRigidbody = getRigidbody();
+      expect(triggerRigidbody.onTriggerEnter).toBeDefined();
+
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-1' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-trigger-123', expect.objectContaining({
+        playerId: 'test-player-1',
+        timestamp: expect.any(Number)
+      }));
+    });
+
+    test('should apply cooldown in AUTO mode', () => {
       jest.useFakeTimers();
-    });
 
-    afterEach(() => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'auto',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: true,
+        emitterControllerCooldown: 2,
+        appID: 'test-auto-cooldown-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.interactionUI.active = true;
+
+      mockApp.emit.mockClear();
+
+      // The trigger zone uses the global rigidbody
+      const triggerRigidbody = getRigidbody();
+
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-1' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-cooldown-123', expect.objectContaining({
+        playerId: 'test-player-1'
+      }));
+
+      expect(controller.isCooldownActive).toBe(true);
+      expect(controller.interactionUI.active).toBe(false);
+
+      mockApp.emit.mockClear();
+
+      // Try to trigger again immediately - should NOT emit because cooldown is active
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-2' });
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-auto-cooldown-123', expect.any(Object));
+
+      jest.advanceTimersByTime(2100);
+
+      expect(controller.isCooldownActive).toBe(false);
+      expect(controller.interactionUI.active).toBe(true);
+
       jest.useRealTimers();
     });
 
-    test('should start cooldown system when enabled', () => {
+    test('should deactivate permanently after first use when single use is enabled in AUTO mode', () => {
       const props = {
         ...mockProps,
-        emitterControllerHasCooldown: true,
-        emitterControllerCooldown: 2,
-        emitterControllerInteractionType: 'key',
-        appID: 'test-cooldown-123'
+        emitterControllerInteractionType: 'auto',
+        emitterControllerIsEnabled: true,
+        emitterControllerIsSingleUse: true,
+        emitterControllerHasCooldown: false,
+        appID: 'test-auto-single-use-123'
       };
-
-      const globalAppEmitSpy = jest.spyOn(global.app, 'emit');
 
       const controller = new EmitterController({
         app: mockApp,
@@ -437,23 +798,267 @@ describe('EmitterController Event Handling Use Cases', () => {
         world: mockWorld
       });
 
-      // Ensure manual trigger is active
-      if (controller.manualTriggerNode) {
-        controller.manualTriggerNode.active = true;
+      controller.interactionUI.active = true;
+
+      mockApp.emit.mockClear();
+
+      // The trigger zone uses the global rigidbody
+      const triggerRigidbody = getRigidbody();
+
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-1' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-single-use-123', expect.objectContaining({
+        playerId: 'test-player-1',
+        timestamp: expect.any(Number)
+      }));
+
+      expect(controller.interactionUI.active).toBe(false);
+
+      mockApp.emit.mockClear();
+
+      // Try to trigger again - should NOT emit because it's deactivated
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-2' });
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-auto-single-use-123', expect.any(Object));
+    });
+
+    test('should apply delay before emitting signal in AUTO mode', () => {
+      jest.useFakeTimers();
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'auto',
+        emitterControllerIsEnabled: true,
+        emitterControllerHasCooldown: false,
+        emitterControllerTransitionDelay: 1.5,
+        appID: 'test-auto-delay-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.interactionUI.active = true;
+
+      mockApp.emit.mockClear();
+
+      // The trigger zone uses the global rigidbody
+      const triggerRigidbody = getRigidbody();
+
+      // Trigger with default delay
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-1' });
+
+      expect(mockApp.emit).not.toHaveBeenCalledWith('test-auto-delay-123', expect.any(Object));
+
+      jest.advanceTimersByTime(1500);
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-delay-123', expect.objectContaining({
+        playerId: 'test-player-1',
+        timestamp: expect.any(Number)
+      }));
+
+      jest.useRealTimers();
+    });
+
+    test('should allow multiple triggers without restrictions when both single use and cooldown are disabled in AUTO mode', () => {
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'auto',
+        emitterControllerIsEnabled: true,
+        emitterControllerIsSingleUse: false,
+        emitterControllerHasCooldown: false,
+        appID: 'test-auto-unrestricted-123'
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: mockWorld
+      });
+
+      controller.interactionUI.active = true;
+      controller.isActive = true;
+
+      mockApp.emit.mockClear();
+
+      // The trigger zone uses the global rigidbody
+      const triggerRigidbody = getRigidbody();
+
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-1' });
+
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-unrestricted-123', expect.objectContaining({
+        playerId: 'test-player-1',
+        timestamp: expect.any(Number)
+      }));
+
+      // UI should remain active (no cooldown, no single use)
+      expect(controller.interactionUI.active).toBe(true);
+
+      mockApp.emit.mockClear();
+
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-2' });
+
+      // Verify the signal was emitted again
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-unrestricted-123', expect.objectContaining({
+        playerId: 'test-player-2',
+        timestamp: expect.any(Number)
+      }));
+
+      // UI should still be active
+      expect(controller.interactionUI.active).toBe(true);
+
+      mockApp.emit.mockClear();
+
+      triggerRigidbody.onTriggerEnter({ playerId: 'test-player-3' });
+
+      // Verify the signal was emitted a third time
+      expect(mockApp.emit).toHaveBeenCalledWith('test-auto-unrestricted-123', expect.objectContaining({
+        playerId: 'test-player-3',
+        timestamp: expect.any(Number)
+      }));
+
+      // UI should still be active - can be used infinitely
+      expect(controller.interactionUI.active).toBe(true);
+    });
+  });
+
+  describe('[SERVER CONTEXT] Event listener initialization', () => {
+    test('should register listeners when isServer is true and params.isServer is true', () => {
+      const testId = generateTestId();
+      const receiverConfig = {
+        id: testId,
+        actions: [{
+          type: 'set-state',
+          params: {
+            isServer: true,
+            active: false
+          }
+        }]
+      };
+
+      const serverWorld = {
+        ...mockWorld,
+        isServer: true,
+        isClient: false,
+        on: jest.fn()
+      };
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerEventReceivers: JSON.stringify([receiverConfig])
+      };
+
+      new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: serverWorld
+      });
+
+      // Verify the server registered the listener for the event
+      expect(serverWorld.on).toHaveBeenCalledWith(testId, expect.any(Function));
+    });
+
+    test('should NOT register listeners when isServer is true but params.isServer is false', () => {
+      const testId = generateTestId();
+      const receiverConfig = {
+        id: testId,
+        actions: [{
+          type: 'set-state',
+          params: {
+            isServer: false,  // Explicitly false
+            active: false
+          }
+        }]
+      };
+
+      const serverWorld = {
+        ...mockWorld,
+        isServer: true,
+        isClient: false,
+        on: jest.fn()
+      };
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerEventReceivers: JSON.stringify([receiverConfig])
+      };
+
+      new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: serverWorld
+      });
+
+      // Verify the server did NOT register the listener (because params.isServer is false)
+      expect(serverWorld.on).not.toHaveBeenCalledWith(testId, expect.any(Function));
+    });
+
+    test('should handle event when server receives it', () => {
+      const testId = generateTestId();
+      const receiverConfig = {
+        id: testId,
+        actions: [{
+          type: 'set-state',
+          params: {
+            isServer: true,
+            active: false
+          }
+        }]
+      };
+
+      const worldEventListeners = {};
+      const serverWorld = {
+        ...mockWorld,
+        isServer: true,
+        isClient: false,
+        on: jest.fn((eventName, listener) => {
+          if (!worldEventListeners[eventName]) {
+            worldEventListeners[eventName] = [];
+          }
+          worldEventListeners[eventName].push(listener);
+        })
+      };
+
+      const props = {
+        ...mockProps,
+        emitterControllerInteractionType: 'key',
+        emitterControllerEventReceivers: JSON.stringify([receiverConfig])
+      };
+
+      const controller = new EmitterController({
+        app: mockApp,
+        node: mockNode,
+        props,
+        world: serverWorld
+      });
+
+      // Verify the server registered the listener
+      expect(serverWorld.on).toHaveBeenCalledWith(testId, expect.any(Function));
+
+      // Spy on _handleEvent to verify it's called
+      const handleEventSpy = jest.spyOn(controller, '_handleEvent');
+
+      // Simulate the server receiving the event
+      if (worldEventListeners[testId]) {
+        worldEventListeners[testId].forEach(listener => {
+          listener({ active: true });
+        });
       }
 
-      // First trigger
-      controller._handleAction({ playerId: 'test-player', type: 'key' });
-      
-      // Verify the signal was emitted
-      const logCalls = globalAppEmitSpy.mock.calls.filter(call => call[0] === 'test-cooldown-123');
-      expect(logCalls.length).toBe(1);
+      // Verify _handleEvent was called
+      expect(handleEventSpy).toHaveBeenCalledWith('set-state', expect.objectContaining({
+        isServer: true,
+        active: false
+      }), { active: true });
 
-      // Verify cooldown was started
-      expect(controller.isCooldownActive).toBe(true);
-      expect(controller.cooldownTimer).toBe(2);
-
-      globalAppEmitSpy.mockRestore();
+      handleEventSpy.mockRestore();
     });
   });
 
@@ -528,7 +1133,6 @@ describe('EmitterController Event Handling Use Cases', () => {
       // State should not change immediately
       // (we can't test this easily without refactoring the code)
 
-      // Advance time
       jest.advanceTimersByTime(1500);
 
       // State should be updated after delay
@@ -564,40 +1168,4 @@ describe('EmitterController Event Handling Use Cases', () => {
       expect(controller.isActive).toBe(false);
     });
   });
-
-  describe('Single use mode', () => {
-    test('should disable emitter after first use when single use is enabled', () => {
-      const props = {
-        ...mockProps,
-        emitterControllerIsSingleUse: true,
-        emitterControllerInteractionType: 'key',
-        emitterControllerHasCooldown: true,
-        emitterControllerCooldown: 1,
-        appID: 'test-single-use-123'
-      };
-
-      const globalAppEmitSpy = jest.spyOn(global.app, 'emit');
-
-      const controller = new EmitterController({
-        app: mockApp,
-        node: mockNode,
-        props,
-        world: mockWorld
-      });
-
-      // Ensure manual trigger is active
-      if (controller.manualTriggerNode) {
-        controller.manualTriggerNode.active = true;
-      }
-
-      // First trigger
-      controller._handleAction({ playerId: 'test-player', type: 'key' });
-      
-      const logCalls = globalAppEmitSpy.mock.calls.filter(call => call[0] === 'test-single-use-123');
-      expect(logCalls.length).toBeGreaterThan(0);
-
-      globalAppEmitSpy.mockRestore();
-    });
-  });
 });
-

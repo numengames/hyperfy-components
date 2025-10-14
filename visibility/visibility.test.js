@@ -263,7 +263,6 @@ function setupServerClientTest(receiverConfig, props = {}, baseWorld, baseNode) 
 describe('VisibilityController Event Handling Use Cases', () => {
   let mockApp, mockProps, mockWorld, mockNode, eventListeners;
 
-  // Helper to create fresh mocks - reduces duplication
   function createFreshMocks() {
     eventListeners = {};
 

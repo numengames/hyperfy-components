@@ -330,8 +330,9 @@ class EmitterController {
     this.manualTriggerNode = null;
     this.isCooldownActive = false;
 
+    this._initEventListeners();
+
     if (world.isClient) {
-      this._initEventListeners();
       this._initInteraction();
     }
 
@@ -535,7 +536,7 @@ class EmitterController {
       timestamp: Date.now(),
     };
 
-    app.emit(this.props.appID, signalData);
+    this.app.emit(this.props.appID, signalData);
     this.log('info', `Signal '${this.props.appID}' emitted successfully`);
   }
 
@@ -566,7 +567,11 @@ class EmitterController {
     this._emitSignal(trigger.playerId);
     this.log('info', `Player triggered emitter with ${this.props.emitterControllerInteractionType}`);
 
-    if (this.props.emitterControllerHasCooldown && this.props.emitterControllerHasCooldown > 0) {
+    if (this.props.emitterControllerIsSingleUse) {
+      this._deactivateTrigger(isKeyMode);
+      this.log('info', 'Single use emitter - permanently deactivated after first use');
+    } else if (this.props.emitterControllerHasCooldown && this.props.emitterControllerHasCooldown > 0) {
+      this._deactivateTrigger(isKeyMode);
       this.cooldownTimer = this.props.emitterControllerCooldown;
       this._setupCooldown();
       this.log('info', `Starting cooldown: ${this.cooldownTimer}s`);
@@ -650,8 +655,13 @@ class EmitterController {
     let receivers = this._normalizeReceivers(this.props.emitterControllerEventReceivers);
 
     receivers.forEach(({ id, type, params = {} }) => {
-      this.log('info', `Setting up receiver for event id: ${id}`);
-      this.world.on(id, (data) => this._handleEvent(type, params, data));
+      if (this.world.isServer && params.isServer) {
+        this.log('info', `Setting up receiver for event id: ${id} in server`);
+        this.world.on(id, (data) => this._handleEvent(type, params, data));
+      } else if (this.world.isClient) {
+        this.log('info', `Setting up receiver for event id: ${id}`);
+        this.world.on(id, (data) => this._handleEvent(type, params, data));
+      }
     });
 
     if (this.props.emitterControllerAcceptAnyEmitter) {
