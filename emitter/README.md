@@ -336,14 +336,13 @@ world.emit('control-emitter-123', {
 
 ## Best Practices
 
-1. **Use meaningful appIDs**: Set descriptive IDs like `door-button-1` instead of random strings
-2. **Test distances**: Adjust trigger and proximity distances based on your world scale
-3. **Provide visual feedback**: Use appropriate labels and UI positioning
-4. **Consider cooldowns**: Prevent spam and improve gameplay with appropriate cooldown times
-5. **Debug during development**: Enable Debug Mode to understand emitter behavior
-6. **Choose appropriate mode**: Use KEY for intentional interactions, AUTO for automatic triggers
-7. **Plan event flow**: Map out which emitters trigger which actions in your world
-8. **Test multiplayer**: Verify behavior works correctly with multiple players
+1. **Test distances**: Adjust trigger and proximity distances based on your world scale
+2. **Provide visual feedback**: Use appropriate labels and UI positioning
+3. **Consider cooldowns**: Prevent spam and improve gameplay with appropriate cooldown times
+4. **Debug during development**: Enable Debug Mode to understand emitter behavior
+5. **Choose appropriate mode**: Use KEY for intentional interactions, AUTO for automatic triggers
+6. **Plan event flow**: Map out which emitters trigger which actions in your world
+7. **Test multiplayer**: Verify behavior works correctly with multiple players
 
 ## Performance Considerations
 
