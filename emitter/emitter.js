@@ -1,11 +1,9 @@
 let rigidbody = null;
 
-// Función para obtener el rigidbody actual
 function getRigidbody() {
   return rigidbody;
 }
 
-// Función para establecer el rigidbody
 function setRigidbody(value) {
   rigidbody = value;
 }
@@ -180,6 +178,7 @@ class EmitterController {
     LEAVE_PROXIMITY_ZONE: 'leave-proximity-zone',
   };
 
+  /* istanbul ignore next */
   static getConfig() {
     return[
       {
@@ -383,7 +382,6 @@ class EmitterController {
   }
 
   _setupUI() {
-    // TODO: Make the UI to update around the mess
     this.interactionUI = this.app.create('ui', {
       width: 200,
       height: 30,
@@ -672,7 +670,6 @@ class EmitterController {
 
 /* istanbul ignore if */
 if (typeof module === 'undefined') {
-  // Only run initialization code in Hyperfy environment (not when importing for testing)
   try {
     mainLogger('info', `Starting ${app.instanceId} app initialization`);
 

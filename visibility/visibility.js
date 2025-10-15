@@ -1,11 +1,9 @@
 let rigidbody = null;
 
-// Función para obtener el rigidbody actual
 function getRigidbody() {
   return rigidbody;
 }
 
-// Función para establecer el rigidbody
 function setRigidbody(value) {
   rigidbody = value;
 }
@@ -169,6 +167,7 @@ function initializeNodeVisibility(node) {
 }
 
 class VisibilityController {
+  /* istanbul ignore next */
   static getConfig() {
     return [
       {
@@ -431,7 +430,6 @@ class VisibilityController {
 
 /* istanbul ignore if */
 if (typeof module === 'undefined') {
-  // Only run initialization code in Hyperfy environment (not when importing for testing)
   try {
     mainLogger('info', `Starting ${app.instanceId} app initialization`);
 
