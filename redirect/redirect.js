@@ -166,16 +166,6 @@ class RedirectController {
         label: 'Redirect Settings'
       },
       {
-        key: 'redirectType',
-        type: 'switch',
-        label: 'Redirect Type',
-        options: [
-          { value: 'external', label: 'External URL' }
-        ],
-        initial: 'external',
-        hint: 'Type of redirect to perform'
-      },
-      {
         key: 'destinationUrl',
         label: 'Destination URL',
         type: 'text',
@@ -237,7 +227,7 @@ class RedirectController {
   _executeRedirect(params) {
     this.log('info', 'Initiating redirect...');
 
-    if (this.props.redirectType === 'external' && this.props.destinationUrl) {
+    if (this.props.destinationUrl) {
       try {
         const completionData = {
           url: this.props.destinationUrl,
@@ -248,13 +238,13 @@ class RedirectController {
         this.app.send(`${RedirectController.EVENTS.REDIRECT_COMPLETE_TO_SERVER}-${this.props.appID}`, completionData);
         this.log('info', 'Redirect completion sent to server');
 
-        this.log('info', `Redirecting to external URL: ${this.props.destinationUrl}`);
+        this.log('info', `Redirecting to URL: ${this.props.destinationUrl}`);
         this.world.open(this.props.destinationUrl, this.props.openInNewWindow);
       } catch (e) {
         this.log('error', `Redirect failed: ${e.message}`);
       }
     } else {
-      this.log('warn', 'No valid redirect destination configured');
+      this.log('warn', 'No destination URL configured');
     }
   }
 

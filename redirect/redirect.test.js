@@ -10,7 +10,6 @@ global.props = {
   targetNodeName: '',
   enableCollision: false,
   initialVisibility: true,
-  redirectType: 'external',
   destinationUrl: 'https://example.com',
   openInNewWindow: true,
   redirectControllerAcceptAnyEmitter: false,
