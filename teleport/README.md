@@ -6,9 +6,9 @@ A flexible teleportation system for Hyperfy that allows players to be teleported
 
 - **Event-Driven Teleportation**: Teleport players using configurable events
 - **Destination Node**: Use any 3D node in your scene as a teleport destination
-- **Visual Indicator**: Optional visibility control for destination markers
-- **Server/Client Support**: Works in both server and client contexts
-- **Accept Any Emitter**: Option to receive teleport events from any emitter
+- **Collision Management**: Automatic collision setup for destination nodes
+- **Server/Client Support**: Works in both server and client contexts with proper coordination
+- **Accept Any Emitter**: Option to receive teleport events from any emitter (with server-to-client broadcast)
 - **Completion Events**: Emits an event when teleportation is complete
 - **Debug Mode**: Built-in logging for troubleshooting
 
@@ -41,8 +41,8 @@ First, add a 3D model or node to your Hyperfy world where you want players to ap
 3. Configure the following in the inspector:
    - **Node name**: The name of your destination node (e.g., "teleport-destination")
    - **AppID**: Automatically set to the instance ID
-   - **Visible Destination**: Whether to show or hide the destination node
-   - **Accept Any Event**: Enable to receive events from any emitter
+   - **Add Collision**: Enable collision on the destination node to prevent players from falling through
+   - **Accept Any Event**: Enable to receive events from any emitter (server broadcasts to all clients)
    - **Event Listeners**: JSON configuration for specific event receivers
 
 ### 3. Configure Event Listeners
@@ -88,13 +88,13 @@ world.on('YB43mk54p', { playerId: 'player-123' });
 | **appID** | text | (auto) | Automatically set to the instance ID |
 | **Node name** | text | - | Name of the 3D node to use as teleport destination |
 | **Debug Mode** | toggle | false | Enable detailed logging for troubleshooting |
+| **Add Collision** | toggle | true | Forces all meshes to have collision. Disable if your model already has embedded collision |
 
 ### Teleport Settings
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| **Visible Destination** | toggle | true | Show or hide the destination node |
-| **Accept Any Event** | toggle | false | Receive events from any emitter that emits to the appID |
+| **Accept Any Event** | toggle | false | Receive events from any emitter. Server broadcasts to all clients when enabled |
 | **Event Listeners** | textarea | `[]` | JSON array of event configurations |
 
 ## Event Listeners Configuration
@@ -215,7 +215,7 @@ Create multiple teleport components with different destination nodes and event I
 ```json
 {
   "targetNodeName": "spawn-point",
-  "teleportControllerVisible": false,
+  "enableCollision": true,
   "teleportControllerEventReceivers": "[{\"id\":\"respawn-event\",\"actions\":[{\"type\":\"teleport\",\"params\":{}}]}]"
 }
 ```
@@ -225,7 +225,7 @@ Create multiple teleport components with different destination nodes and event I
 ```json
 {
   "targetNodeName": "portal-destination",
-  "teleportControllerVisible": true,
+  "enableCollision": true,
   "teleportControllerEventReceivers": "[{\"id\":\"CD67pq89r\",\"actions\":[{\"type\":\"teleport\",\"params\":{}}]}]"
 }
 ```
@@ -235,7 +235,7 @@ Create multiple teleport components with different destination nodes and event I
 ```json
 {
   "targetNodeName": "landing-pad",
-  "teleportControllerVisible": true,
+  "enableCollision": true,
   "teleportControllerAcceptAnyEmitter": true
 }
 ```
@@ -245,7 +245,7 @@ Create multiple teleport components with different destination nodes and event I
 ```json
 {
   "targetNodeName": "boss-room-entrance",
-  "teleportControllerVisible": false,
+  "enableCollision": false,
   "teleportControllerEventReceivers": "[{\"id\":\"enter-boss-room\",\"actions\":[{\"type\":\"teleport\",\"params\":{}}]}]"
 }
 ```
@@ -271,11 +271,12 @@ Enable **Debug Mode** to see detailed error messages in the console.
 ## Tips
 
 1. **Test First**: Use debug mode when setting up new teleport destinations
-2. **Visual Markers**: Keep destination nodes visible during development
+2. **Collision Setup**: Enable collision on destination nodes to prevent players from falling through geometry
 3. **Naming Convention**: Use descriptive names for destination nodes (e.g., "tp-castle-entrance")
 4. **Event Naming**: Include your appID in custom event names to avoid conflicts
-5. **Accept Any Event**: Enable this for simpler setups with fewer emitters
+5. **Accept Any Event**: Enable this for simpler setups with fewer emitters. Server will broadcast to all clients automatically
 6. **Chain Actions**: Use the teleport-complete event to trigger sequences (e.g., teleport → fade in → show UI)
+7. **Server Context**: Use `params.isServer: true` when you need server-side validation before teleportation
 
 ## Download
 
