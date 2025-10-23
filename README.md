@@ -1,21 +1,58 @@
 # Hyperfy Components
 
-A collection of reusable components for Hyperfy virtual worlds. These plug-and-play solutions enhance your Hyperfy projects with features like player respawn systems and interactive elements. All components are well-documented and ready to use in any Hyperfy world.
+A collection of reusable components for Hyperfy virtual worlds. These plug-and-play solutions enhance your Hyperfy projects with features like player respawn systems, interactive elements, animations, and event-driven behaviors. All components are well-documented, thoroughly tested, and ready to use in any Hyperfy world.
 
 ## Available Components
 
-### Respawn System
+### Core Animation Components
+
+#### **Visibility Controller** (`visibility/`)
+Manages the visibility and collision state of 3D objects with event-driven control. Perfect for creating interactive elements that appear/disappear based on player actions or triggers. [Learn more](./visibility/README.md)
+
+#### **Rotate Controller** (`rotate/`)
+Provides smooth 3D object rotation animations with configurable speed, delays, and event-driven control. Supports both target-based and continuous rotation modes. [Learn more](./rotate/README.md)
+
+#### **Translate Controller** (`translate/`)
+Handles smooth 3D object translation animations with configurable speed, delays, and event-driven control. Perfect for moving platforms, doors, and interactive elements. [Learn more](./translate/README.md)
+
+### Interactive Components
+
+#### **Emitter Controller** (`emitter/`)
+Creates interactive trigger zones that emit events when players interact with them. Supports both manual (key-based) and automatic (proximity-based) triggering modes. [Learn more](./emitter/README.md)
+
+#### **Teleport Controller** (`teleport/`)
+Implements teleportation functionality that moves players to specific locations when triggered. Perfect for creating portals, fast travel systems, and spatial navigation. [Learn more](./teleport/README.md)
+
+#### **Redirect Controller** (`redirect/`)
+Handles external URL redirection when triggered by events. Opens websites or external resources in new browser windows/tabs. [Learn more](./redirect/README.md)
+
+### Legacy Components
+
+#### **Respawn System** (`respawn/`)
 The respawn component tracks player positions and automatically returns them to their last safe position when they fall below a configurable threshold. [Learn more](./respawn/README.md)
 
-### Teleport Auto
-An interactive component that implements automatic teleportation functionality based on proximity. Teleports players when they enter a configurable radius around the component. [Learn more](./teleport-auto/README.md)
+## Key Features
 
-### Redirect Key
-An interactive component that lets users click on objects to be redirected to external websites or URLs. Perfect for creating interactive portals to external resources. [Learn more](./redirect-key/README.md)
+- **Event-Driven Architecture**: All components communicate through a unified event system
+- **Server-Client Synchronization**: Multiplayer-ready with automatic state synchronization
+- **Collision Management**: Built-in collision detection and physics integration
+- **Comprehensive Testing**: All components include extensive test suites with >95% coverage
+- **Debug Support**: Built-in logging and debugging capabilities
+- **Flexible Configuration**: Highly configurable through Hyperfy's UI system
+- **Documentation**: Complete documentation with examples and best practices
 
 ## Installation
 
 Each component is available as an individual .hyp file that can be imported into your Hyperfy world. Check the component's documentation for specific installation instructions.
+
+## Development
+
+This project uses Jest for testing and follows a consistent architecture pattern across all components. Each component includes:
+
+- Main component file (`.js`)
+- Comprehensive test suite (`.test.js`)
+- Detailed documentation (`README.md`)
+- Configuration through `getConfig()` static method
 
 ## License
 

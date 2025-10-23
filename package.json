@@ -1,0 +1,35 @@
+{
+  "name": "hyperfy-components",
+  "version": "1.0.0",
+  "description": "Hyperfy components for metaverse experiences",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "visibility/visibility.js",
+      "emitter/emitter.js", 
+      "rotate/rotate.js",
+      "translate/translate.js",
+      "redirect/redirect.js",
+      "teleport/teleport.js"
+    ],
+    "testMatch": [
+      "**/*.test.js"
+    ]
+  },
+  "keywords": [
+    "hyperfy",
+    "metaverse",
+    "components"
+  ],
+  "author": "Numen Games",
+  "license": "MIT"
+} 
