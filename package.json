@@ -14,12 +14,10 @@
   "jest": {
     "testEnvironment": "node",
     "collectCoverageFrom": [
-      "visibility/visibility.js",
-      "emitter/emitter.js", 
-      "rotate/rotate.js",
-      "translate/translate.js",
-      "redirect/redirect.js",
-      "teleport/teleport.js"
+      "**/*.js",
+      "!**/*.test.js",
+      "!**/node_modules/**",
+      "!**/coverage/**"
     ],
     "testMatch": [
       "**/*.test.js"

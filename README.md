@@ -26,6 +26,21 @@ Implements teleportation functionality that moves players to specific locations 
 #### **Redirect Controller** (`redirect/`)
 Handles external URL redirection when triggered by events. Opens websites or external resources in new browser windows/tabs. [Learn more](./redirect/README.md)
 
+#### **Dialog Controller** (`dialog/`)
+Interactive dialog system for character conversations with support for multiple lines, character names, auto-advance, and text splitting. Perfect for creating immersive storytelling experiences. [Learn more](./dialog/README.md)
+
+#### **Logs Controller** (`logs/`)
+Centralized logging system that handles debug messages across all components. Provides unified logging interface with support for different log levels and server-client synchronization. [Learn more](./logs/README.md)
+
+#### **Keyboard Controller** (`keyboard/`)
+Virtual keyboard component that provides on-screen keypad functionality. Supports both letter and number keypads with customizable appearance and event-driven interactions. [Learn more](./keyboard/README.md)
+
+#### **Password Manager** (`password-manager/`)
+Secure password management component with input UI, validation, and keyboard integration. Provides password-protected access to features and seamless integration with keyboard components. [Learn more](./password-manager/README.md)
+
+#### **Privacy Policy** (`privacy-policy/`)
+Privacy policy display component that shows privacy policy information to users. Provides a clean interface for displaying legal information and terms of service. [Learn more](./privacy-policy/README.md)
+
 ### Legacy Components
 
 #### **Respawn System** (`respawn/`)
